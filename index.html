@@ -73,6 +73,7 @@ button,input,select{font:inherit;color:inherit}
 .thumb{width:62px;aspect-ratio:210/297;border:1px solid var(--line);border-radius:4px;background:#fff;object-fit:cover;flex:none}
 .fileinfo .fn{font-weight:600;word-break:break-word;font-size:14px;line-height:1.5}
 .fileinfo .fm{color:var(--muted);font-size:12.5px}
+.thumb.fmt{display:grid;place-items:center;font-family:var(--f-display);font-weight:600;font-size:13px;color:var(--blue);background:var(--surface-2)}
 
 /* steps */
 .steps{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:6px}
@@ -247,6 +248,7 @@ details.axis summary .sc{margin-inline-start:auto;font-variant-numeric:tabular-n
       </div>
       <div class="basis">
         <span class="chip">المرجع: <b>دليل إدارة الوثائق والاعتمادات</b></span>
+        <span class="chip">أدلة الإدارات: <b>التعليم · الاستدامة · الدعم المؤسسي</b></span>
         <span class="chip">و <b>دليل النماذج والمرفقات المؤسسية</b> · إصدار 01</span>
       </div>
     </header>
@@ -255,16 +257,16 @@ details.axis summary .sc{margin-inline-start:auto;font-variant-numeric:tabular-n
     <div class="grid">
       <aside class="side">
         <section class="panel" aria-labelledby="up-h">
-          <h2 id="up-h">رفع المخرج <small>PDF فقط</small></h2>
+          <h2 id="up-h">رفع المخرج <small>PDF · Word · Excel</small></h2>
           <label class="drop" id="drop" for="fileInput">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6"/><path d="m9.5 13.5 2.5-2.5 2.5 2.5"/></svg>
             <strong>اسحب ملف المخرج هنا</strong>
-            <span>أو انقر للاختيار — يبدأ التقييم تلقائياً فور الرفع</span>
-            <input type="file" id="fileInput" accept="application/pdf,.pdf">
+            <span>أو انقر للاختيار — PDF أو Word أو Excel، ويبدأ التقييم تلقائياً فور الرفع</span>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </label>
           <div id="fileBox" hidden>
             <div class="fileinfo">
-              <canvas class="thumb" id="thumb" width="62" height="88"></canvas>
+              <canvas class="thumb" id="thumb" width="62" height="88"></canvas><div class="thumb fmt" id="fmtBadge" hidden></div>
               <div><div class="fn" id="fName"></div><div class="fm tabnum" id="fMeta"></div></div>
             </div>
             <ol class="steps" id="steps">
@@ -282,8 +284,8 @@ details.axis summary .sc{margin-inline-start:auto;font-variant-numeric:tabular-n
         <section class="panel" id="metaPanel" hidden aria-labelledby="meta-h">
           <h2 id="meta-h">بيانات المخرج <small>مُستخرجة آلياً</small></h2>
           <div class="fields">
+            <div class="field"><label for="mDept">الإدارة <span class="auto" id="mDeptAuto"></span></label><select id="mDept"></select></div>
             <div class="field"><label for="mType">نوع الوثيقة <span class="auto" id="mTypeAuto"></span></label><select id="mType"></select></div>
-            <div class="field"><label for="mDept">الإدارة</label><input id="mDept" list="deptList" autocomplete="off"></div>
             <div class="field"><label for="mSec">القسم</label><input id="mSec" list="secList" autocomplete="off"></div>
             <div class="two">
               <div class="field"><label for="mWeek">الأسبوع</label><input id="mWeek" inputmode="numeric" autocomplete="off"></div>
@@ -291,7 +293,7 @@ details.axis summary .sc{margin-inline-start:auto;font-variant-numeric:tabular-n
             </div>
             <button class="btn" id="reEval" type="button">إعادة التقييم بالبيانات المعدلة</button>
           </div>
-          <datalist id="deptList"></datalist><datalist id="secList"></datalist>
+          <datalist id="secList"></datalist>
         </section>
 
         <section class="panel" id="histPanel" hidden aria-labelledby="h-h">
@@ -521,15 +523,32 @@ const TYPES = [
     fields:[F('المحاور',['المحاور','محور']),F('المبادرات',['المبادرات']),F('الجدول الزمني العام',['الجدول الزمني','المرحله']),F('مؤشرات النجاح',['مؤشرات','مؤشر'])] },
   { id:'processmap', name:'خارطة العمليات', kws:['خارطه العمليات'], approval:['ed'], matrix:'المدير التنفيذي',
     fields:[F('العمليات الرئيسية والفرعية',['العمليات الرييسيه','العمليات الفرعيه','العمليات']),F('مالك كل عملية',['مالك العمليه','المالك']),F('نقاط التقاطع بين الإدارات',['التقاطع','الادارات'])] }
+,
+  { id:'worksheet', name:'مخرج تنفيذي / وثيقة عمل', kws:['مخرج تنفيذي','وثيقه عمل','ورقه عمل'], approval:['dm'], matrix:'مدير الإدارة',
+    fields:[F('الغرض من المخرج',['الغرض','الهدف']),F('البيانات أو المحتوى التنفيذي',['البيانات','المحتوي','التفاصيل']),F('التاريخ',['التاريخ']),F('المسؤول عن الإعداد',['المسؤول','اعداد']),F('اعتماد مدير الإدارة',['الاعتماد','معتمد','التوقيع'])] },
+  { id:'requirements', name:'وثيقة تعريف/متطلبات', kws:['وثيقه تعريف','وثيقه متطلبات','متطلبات'], approval:['dm','ed'], matrix:'مدير الإدارة أو المدير التنفيذي',
+    fields:[F('الغرض',['الغرض','الهدف']),F('النطاق',['النطاق']),F('المتطلبات التفصيلية',['المتطلبات','متطلب']),F('المعايير أو مؤشرات القبول',['المعايير','مؤشرات','معيار']),F('المسؤوليات',['المسؤوليات','المسؤول'])] }
 ];
 const TYPE_BY_ID = Object.fromEntries(TYPES.map(t => [t.id, t]));
 
-const DEPTS = ['إدارة الاستدامة','إدارة الشؤون التعليمية','إدارة الشؤون الإدارية والمالية','إدارة الشؤون النسائية','إدارة البرامج والأنشطة','مكتب المدير التنفيذي'];
-const SECTIONS = [
-  ['الاستراتيجية والتميز المؤسسي','إدارة الاستدامة'],['تنمية الموارد','إدارة الاستدامة'],['الاتصال المؤسسي','إدارة الاستدامة'],
-  ['التحول الرقمي','إدارة الاستدامة'],['الإدارة المالية','إدارة الاستدامة'],['الشراكات',''],['التطوع',''],['الموارد البشرية',''],
-  ['الحلقات القرآنية',''],['الإقراء والإسناد',''],['الجودة',''],['المشتريات',''],['تقنية المعلومات','']
+const DEPARTMENTS = [
+  { id:'edu', name:'إدارة التعليم', kws:['اداره التعليم','التعليم'],
+    guide:'دليل إدارة الوثائق والاعتمادات — إدارة التعليم',
+    sections:['التخطيط التعليمي','مساعد التعليم (بنين-بنات)','جودة التعليم','شؤون المستفيدين'] },
+  { id:'sustain', name:'إدارة الاستدامة', kws:['اداره الاستدامه','الاستدامه'],
+    guide:'دليل إدارة الوثائق والاعتمادات — إدارة الاستدامة',
+    sections:['الاستراتيجية والتميز المؤسسي','تنمية الموارد','الاتصال المؤسسي','التحول الرقمي','الإدارة المالية'] },
+  { id:'support', name:'إدارة الدعم المؤسسي', kws:['اداره الدعم المؤسسي','الدعم المؤسسي'],
+    guide:'دليل إدارة الوثائق والاعتمادات — إدارة الدعم المؤسسي',
+    sections:['قسم المالية','قسم الموارد البشرية','وحدة التطوع','قسم الخدمات المساندة'],
+    types:['worksheet','form','procedure','record','report','policy','plan','guide','requirements','risk','framework','projectcard','methodology','authority'],
+    typesNote:'حصر دليل الإدارة وثائقها في 15 نوعاً (الفصل 2).' },
+  { id:'exec', name:'مكتب المدير التنفيذي', kws:['مكتب المدير التنفيذي'],
+    guide:'دليل إدارة الوثائق والاعتمادات (الدليل المؤسسي الرئيسي)', sections:['التوثيق','الحوكمة والامتثال'] },
+  { id:'other', name:'إدارة أخرى', kws:[], guide:'دليل إدارة الوثائق والاعتمادات (الدليل المؤسسي الرئيسي)', sections:[] }
 ];
+const DEPT_BY_ID = Object.fromEntries(DEPARTMENTS.map(d => [d.id, d]));
+const ALL_SECTIONS = [...new Set(DEPARTMENTS.flatMap(d => d.sections))];
 
 /* ---------- قراءة PDF: نصوص، مواقع، خطوط، صور، ألوان ---------- */
 const PAL = {
@@ -608,7 +627,7 @@ async function analyzePdf(file, onStep){
     pages.push({ num: p, W, H, items, text, rev, fontChars, images, textColors, shapeColors, page });
     onStep && onStep('text', p, Math.min(n, MAXP));
   }
-  return { pdf, numPages: n, pages, docFonts, thumbCanvas, truncated: n > MAXP };
+  return { kind: 'pdf', kindName: 'PDF', pdf, numPages: n, pages, docFonts, thumbCanvas, truncated: n > MAXP };
 }
 
 /* دمج الحروف المتجاورة وتصحيح الترتيب البصري المعكوس (بعض مولدات PDF) */
@@ -645,6 +664,16 @@ function textQuality(pages){
   }
   const perPage = all / Math.max(1, pages.length);
   return { arabicRatio: all ? ar / all : 0, charsPerPage: perPage, commonRatio: toks ? hits / toks : 0, tokens: toks };
+}
+
+function qualityOf(an){
+  if ((an.kind || 'pdf') === 'pdf') return textQuality(an.pages);
+  const t = an.scopes.all;
+  let ar = 0, all = 0, hits = 0;
+  const cset = new Set(COMMON);
+  for (const ch of t){ if (/[\u0600-\u06FF\uFB50-\uFEFF]/.test(ch)) ar++; if (/\S/.test(ch)) all++; }
+  const tk = tokenize(t); for (const x of tk) if (cset.has(x)) hits++;
+  return { arabicRatio: all ? ar / all : 0, charsPerPage: all, commonRatio: tk.length ? hits / tk.length : 0, tokens: tk.length };
 }
 
 /* التعرف الضوئي (اختياري، يعمل عند توفر المكتبة) */
@@ -706,18 +735,26 @@ function extractNumbers(s){ return (toLatinDigits(s).match(/\d+/g) || []).map(Nu
 function buildContext(an, file){
   const cache = new MatchCache();
   const mk = t => { const c = new Corpus(t, null); cache.addTokens(c.tokens); return c; };
-  const n = an.pages.length;
-  const doc = mk(pagesText(an, an.pages.map((_, i) => i)));
-  const p1tok = tokenize(pagesText(an, [0])).length;
-  const cover = mk(pagesText(an, p1tok < 20 ? [0, 1] : [0]));
-  const front = mk(pagesText(an, [0, 1, 2]));
-  const back = mk(pagesText(an, [n - 2, n - 1]));
-  const approvalScope = mk(pagesText(an, [0, 1, n - 1]));
-  const baseName = file.name.replace(/\.pdf$/i, '');
+  const kind = an.kind || 'pdf';
+  let doc, cover, front, back, approvalScope, n;
+  if (kind === 'pdf'){
+    n = an.pages.length;
+    doc = mk(pagesText(an, an.pages.map((_, i) => i)));
+    const p1tok = tokenize(pagesText(an, [0])).length;
+    cover = mk(pagesText(an, p1tok < 20 ? [0, 1] : [0]));
+    front = mk(pagesText(an, [0, 1, 2]));
+    back = mk(pagesText(an, [n - 2, n - 1]));
+    approvalScope = mk(pagesText(an, [0, 1, n - 1]));
+  } else {
+    const sc = an.scopes;
+    n = an.numPages || 1;
+    doc = mk(sc.all); cover = mk(sc.cover); front = mk(sc.front); back = mk(sc.back); approvalScope = mk(sc.approval);
+  }
+  const baseName = file.name.replace(/\.(pdf|docx|xlsx|doc|xls)$/i, '');
   const fileCorpus = mk(baseName.replace(/[_\-]+/g, ' '));
   const segs = baseName.split(/_+/).map(s => s.trim()).filter(Boolean);
   const firstSeg = mk(segs[0] || '');
-  return { an, file, cache, doc, cover, front, back, approvalScope, fileCorpus, firstSeg, segs, baseName, n };
+  return { an, file, kind, cache, doc, cover, front, back, approvalScope, fileCorpus, firstSeg, segs, baseName, n };
 }
 
 function detectType(ctx){
@@ -746,70 +783,83 @@ function planSubtype(ctx){
   return null;
 }
 function detectVersion(ctx){
-  const src = toLatinDigits(norm(pagesText(ctx.an, [0, 1]))).replace(/\s+/g, ' ');
+  const src = toLatinDigits(norm(ctx.kind === 'pdf' ? pagesText(ctx.an, [0, 1]) : ctx.an.scopes.cover + ' ' + ctx.an.scopes.footer)).replace(/\s+/g, ' ');
   let m = src.match(/(?:اصدار|version)[^\d\n]{0,8}(\d{1,2}(?:[.,]\d{1,2})?)(?!\d)/i);
   if (!m){ const j = rasmWord(src.replace(/\s+/g, '')); const mm = j.match(/صدار\D{0,8}(\d{1,2}(?:\d)?)/); if (mm) m = [mm[0], mm[1]]; }
   return m ? m[1].replace(',', '.') : '';
 }
 function detectWeek(ctx){
-  const s = toLatinDigits(norm(ctx.baseName + ' ' + pagesText(ctx.an, [0])));
+  const s = toLatinDigits(norm(ctx.baseName + ' ' + (ctx.kind === 'pdf' ? pagesText(ctx.an, [0]) : ctx.an.scopes.cover)));
   const m = s.match(/(?:الاسبوع|اسبوع|week)\s*[:\-_]?\s*(\d{1,2})/i);
   return m ? m[1] : '';
 }
 function detectDeptSection(ctx){
-  let dept = '', sec = '';
-  if (ctx.segs.length >= 4){
+  const C = ctx.cache;
+  let deptId = '', dept = '', sec = '';
+  let best = 0;
+  for (const d of DEPARTMENTS){
+    if (!d.kws.length) continue;
+    let sc = 0;
+    for (const kw of d.kws){
+      sc += findKw(ctx.fileCorpus, kw, C) * 6 + findKw(ctx.cover, kw, C) * 3 + Math.min(findKw(ctx.doc, kw, C), 8) * 0.5;
+    }
+    for (const sname of d.sections) sc += findKw(ctx.cover, sname, C) * 2;
+    if (sc > best){ best = sc; deptId = d.id; dept = d.name; }
+  }
+  if (best < 3){ deptId = ''; dept = ''; }
+  if (!dept && ctx.segs.length >= 4){
     const cand = ctx.segs[2];
-    if (cand && !/\d{4}/.test(cand)) dept = cand.startsWith('إدارة') || cand.startsWith('ادارة') || cand.startsWith('مكتب') ? cand : 'إدارة ' + cand;
+    if (cand && !/\d{4}/.test(cand)) dept = /^(إدارة|ادارة|مكتب)/.test(cand) ? cand : 'إدارة ' + cand;
   }
-  const scoreOf = (label) => {
-    const kw = label.replace(/^إدارة\s+/, 'اداره ');
-    return findKw(ctx.cover, kw, ctx.cache) * 3 + Math.min(findKw(ctx.doc, kw, ctx.cache), 6);
-  };
-  if (!dept){
-    let best = 0; for (const d of DEPTS){ const s = scoreOf(d); if (s > best){ best = s; dept = d; } }
-  }
-  let bestS = 0, secDept = '';
-  for (const [s, d] of SECTIONS){
-    const sc = findKw(ctx.cover, s, ctx.cache) * 3 + findKw(ctx.cover, 'قسم ' + s, ctx.cache) * 3;
-    if (sc > bestS){ bestS = sc; sec = s; secDept = d; }
+  const pool = deptId && DEPT_BY_ID[deptId].sections.length ? DEPT_BY_ID[deptId].sections : ALL_SECTIONS;
+  let bestS = 0;
+  for (const sname of pool){
+    const bare = sname.replace(/^(قسم|وحدة)\s+/, '');
+    const scv = findKw(ctx.cover, bare, C) * 3 + findKw(ctx.cover, 'قسم ' + bare, C) * 3 + findKw(ctx.fileCorpus, bare, C) * 4;
+    if (scv > bestS){ bestS = scv; sec = sname; }
   }
   if (bestS < 3) sec = '';
-  if (!dept && sec && secDept) dept = secDept;
-  return { dept, sec };
+  return { deptId: deptId || 'other', dept: dept || '', sec };
 }
 
 function evaluate(ctx, meta){
-  const an = ctx.an, n = ctx.n, C = ctx.cache;
+  const an = ctx.an, C = ctx.cache;
+  const kind = ctx.kind || 'pdf';
+  const isPdf = kind === 'pdf', isDocx = kind === 'docx', isXlsx = kind === 'xlsx';
+  const dept = DEPT_BY_ID[meta.deptId] || DEPT_BY_ID.other;
+  const REFD = dept.guide || REF_D;
   const type = meta.typeId ? TYPE_BY_ID[meta.typeId] : null;
-  const inner = an.pages.slice(1);
+  const p1 = isPdf ? an.pages[0] : null;
+  const inner = isPdf ? an.pages.slice(1) : [];
+  const n = isPdf ? ctx.n : (an.numPages || (isDocx ? Math.max(1, Math.round((an.lineCount || 20) / 30)) : 1));
+  const fmtName = an.kindName || 'PDF';
   const checks = [];
   const add = (axis, id, title, sev, ref, fix, res) => checks.push({ axis, id, title, sev, ref, fix, ...res });
 
   /* ===== المحور 1: الغلاف وجدول الاعتماد ===== */
-  const p1 = an.pages[0];
-  const coverImgs = p1.images.filter(im => im.yTop < 0.45);
+  const coverImgs = isPdf ? p1.images.filter(im => im.yTop < 0.45) : (an.images.cover ? [1] : []);
+  const anyCoverImg = isPdf ? p1.images.length > 0 : an.images.total > 0;
   const nameHit = anyKw(ctx.cover, ['سمو', 'تحفيظ القران', 'الجمعيه الخيريه', 'بالقنفذه'], C);
-  add('cover','c-name','اسم الجمعية على صفحة الغلاف','major', REF_D + ' · الفصل 5: طريقة كتابة الوثيقة',
+  add('cover','c-name','اسم الجمعية على صفحة الغلاف','major', REFD + ' · الفصل 5: طريقة كتابة الوثيقة',
     'إضافة اسم الجمعية الرسمي «جمعية سمو لتحفيظ القرآن الكريم بالقنفذة» على صفحة الغلاف.',
     nameHit ? r('pass', 'ورد اسم الجمعية نصاً في الغلاف.') : coverImgs.length ? r('partial', 'لم يُعثر على الاسم نصاً؛ يُرجَّح وروده ضمن صورة الشعار.') : r('fail', 'لا يظهر اسم الجمعية على الغلاف.'));
 
-  add('cover','c-logo','شعار الجمعية في أعلى صفحة الغلاف','major', REF_D + ' · الفصل 6: استخدام شعار الجمعية',
+  add('cover','c-logo','شعار الجمعية في أعلى صفحة الغلاف','major', REFD + ' · الفصل 6: استخدام شعار الجمعية',
     'إدراج النسخة الرسمية المعتمدة من الشعار أعلى صفحة الغلاف (عرض 3.5 سم كحد أقصى) دون تعديل ألوانه أو تناسبه.',
-    coverImgs.length ? r('pass', 'رُصد عنصر شعار/صورة في الجزء العلوي من الغلاف.') : (p1.images.length ? r('partial', 'توجد صورة في الغلاف لكنها ليست في أعلاه.') : r('fail', 'لم يُرصد أي شعار في صفحة الغلاف.')));
+    coverImgs.length ? r('pass', isPdf ? 'رُصد عنصر شعار/صورة في الجزء العلوي من الغلاف.' : 'رُصدت صورة الشعار في مقدمة الملف.') : (anyCoverImg ? r('partial', 'توجد صورة في الملف لكنها ليست في صدر الوثيقة.') : r('fail', 'لم يُرصد أي شعار في صدر الوثيقة.')));
 
   const typeWordOnCover = type ? type.kws.some(k => findKw(ctx.cover, k, C)) : false;
-  add('cover','c-title','اسم الوثيقة يبدأ بنوعها ومتبوع بموضوعها','major', REF_D + ' · الفصل 5: طريقة كتابة اسم الوثيقة',
+  add('cover','c-title','اسم الوثيقة يبدأ بنوعها ومتبوع بموضوعها','major', REFD + ' · الفصل 5: طريقة كتابة اسم الوثيقة',
     'صياغة العنوان بنوع الوثيقة ثم موضوعها بدقة، مثل: «سياسة إدارة الأداء المؤسسي».',
     !type ? r('fail', 'تعذّر تحديد نوع الوثيقة من العنوان أو اسم الملف.') : typeWordOnCover ? r('pass', `يتضمن الغلاف نوع الوثيقة «${type.name}».`) : r('fail', `لم يرد نوع الوثيقة «${type.name}» في عنوان الغلاف.`));
 
   const verRaw = meta.version || '';
   const hasVerWord = anyKw(ctx.cover, ['الاصدار', 'اصدار', 'رقم الاصدار', 'version'], C);
-  add('cover','c-ver','رقم الإصدار على صفحة الغلاف','major', REF_D + ' · الفصل 5: طريقة كتابة رقم الإصدار',
+  add('cover','c-ver','رقم الإصدار على صفحة الغلاف','major', REFD + ' · الفصل 5: طريقة كتابة رقم الإصدار',
     'إثبات رقم الإصدار على الغلاف بصيغة موحدة: «رقم الإصدار: 01».',
     hasVerWord && verRaw ? r('pass', `رقم الإصدار المرصود: ${verRaw}`) : hasVerWord ? r('partial', 'وردت كلمة «الإصدار» دون رقم واضح.') : r('fail', 'لا يوجد رقم إصدار على الغلاف.'));
 
-  const coverRaw = toLatinDigits(norm(pagesText(an, [0, 1])));
+  const coverRaw = toLatinDigits(norm(isPdf ? pagesText(an, [0, 1]) : an.scopes.cover + ' ' + an.scopes.footer));
   const dmy = coverRaw.match(/\b(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{4})\b/);
   const ymd = coverRaw.match(/\b(\d{4})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\b/);
   const yr = dmy ? +dmy[3] : ymd ? +ymd[1] : 0;
@@ -819,7 +869,7 @@ function evaluate(ctx, meta){
   else if (yr >= 1400 && yr < 1500) dateRes = r('partial', `التاريخ المرصود هجري (${yr}هـ)؛ المعتمد الكتابة بالتقويم الميلادي.`);
   else if (yr >= 2000 && yr < 2100) dateRes = dateKw ? r('pass', `تاريخ ميلادي مرصود (${yr}م).`) : r('partial', `رُصد تاريخ (${yr}م) دون تسمية صريحة «تاريخ الاعتماد».`);
   else dateRes = r('fail', 'صيغة التاريخ غير واضحة.');
-  add('cover','c-date','تاريخ الاعتماد بالتقويم الميلادي (يوم/شهر/سنة)','major', REF_D + ' · الفصل 5: طريقة كتابة تاريخ الاعتماد',
+  add('cover','c-date','تاريخ الاعتماد بالتقويم الميلادي (يوم/شهر/سنة)','major', REFD + ' · الفصل 5: طريقة كتابة تاريخ الاعتماد',
     'تدوين تاريخ الاعتماد على الغلاف بالتقويم الميلادي بصيغة (يوم/شهر/سنة).', dateRes);
 
   const hasPrep = findKw(ctx.approvalScope, 'اعداد', C) > 0 || findKw(ctx.approvalScope, 'اعدد', C) > 0;
@@ -827,7 +877,7 @@ function evaluate(ctx, meta){
   const hasApp = findKw(ctx.approvalScope, 'اعتماد', C) > 0 || findKw(ctx.approvalScope, 'المعتمد', C) > 0;
   const tri = [hasPrep, hasRev, hasApp].filter(Boolean).length;
   const missingTri = [!hasPrep && 'الإعداد', !hasRev && 'المراجعة', !hasApp && 'الاعتماد'].filter(Boolean);
-  add('cover','c-approval','جدول الاعتماد (إعداد · مراجعة · اعتماد)','critical', REF_F + ' · صفحة الغلاف المعتمدة / ' + REF_D + ' · الفصل 2: دورة حياة الوثيقة',
+  add('cover','c-approval','جدول الاعتماد (إعداد · مراجعة · اعتماد)','critical', REF_F + ' · صفحة الغلاف المعتمدة / ' + REFD + ' · الفصل 2: دورة حياة الوثيقة',
     'إضافة جدول الاعتماد على الغلاف بثلاثة أعمدة: إعداد (مالك الوثيقة) · مراجعة (قسم التميز المؤسسي/الجهة المختصة) · اعتماد (الجهة المخولة وفق المصفوفة).',
     tri === 3 ? r('pass', 'رُصدت خانات الإعداد والمراجعة والاعتماد.') : tri === 2 ? r('partial', 'جدول الاعتماد ناقص: لا توجد خانة ' + missingTri.join(' و') + '.') : r('fail', 'لا يوجد جدول اعتماد مكتمل' + (missingTri.length ? ' (مفقود: ' + missingTri.join('، ') + ')' : '') + '.'));
 
@@ -848,7 +898,7 @@ function evaluate(ctx, meta){
     else if (found.length) appRes = r('fail', `الجهة المرصودة «${found.map(f => ENTITIES[f].name).join('، ')}» لا تطابق المصفوفة؛ المطلوب: ${matrixLabel}.`);
     else appRes = r('fail', `لم تُحدَّد جهة الاعتماد؛ المطلوب وفق المصفوفة: ${matrixLabel}.`);
   }
-  add('cover','c-authority','جهة الاعتماد متوافقة مع مصفوفة جهات الاعتماد','critical', REF_D + ' · الفصل 4: مصفوفة جهات الاعتماد',
+  add('cover','c-authority','جهة الاعتماد متوافقة مع مصفوفة جهات الاعتماد','critical', REFD + ' · الفصل 4: مصفوفة جهات الاعتماد',
     `رفع الوثيقة للجهة المخولة وتدوينها في جدول الاعتماد: ${matrixLabel}.`, appRes);
 
   /* ===== المحور 2: المحتوى الإلزامي ===== */
@@ -860,30 +910,50 @@ function evaluate(ctx, meta){
         hit ? r('pass', 'ورد العنصر في متن الوثيقة.') : r('fail', `لم يُرصد عنصر «${f.t}» ضمن محتوى الوثيقة.`));
     }
   } else {
-    add('content','f-none','تصنيف الوثيقة ضمن الأنواع المعتمدة','critical', REF_D + ' · الفصل 3: تصنيف الوثائق المؤسسية',
+    add('content','f-none','تصنيف الوثيقة ضمن الأنواع المعتمدة','critical', REFD + ' · الفصل 3: تصنيف الوثائق المؤسسية',
       'تحديد نوع الوثيقة بدقة (سياسة، إجراء، دليل، تقرير، سجل…) وفق التصنيف المعتمد وبناؤها على قالبه.',
       r('fail', 'لم يتضح نوع الوثيقة؛ اختر النوع يدوياً من بيانات المخرج لإكمال فحص المحتوى.'));
   }
-  const longDoc = n >= 8;
+  const longDoc = !isXlsx && n >= 8;
   const tocHit = anyKw(ctx.front, ['فهرس المحتويات', 'المحتويات', 'الفهرس'], C);
-  add('content','c-toc','فهرس محتويات للوثائق الطويلة','major', REF_D + ' · الفصل 5: طريقة كتابة الوثيقة',
+  add('content','c-toc','فهرس محتويات للوثائق الطويلة','major', REFD + ' · الفصل 5: طريقة كتابة الوثيقة',
     'إضافة فهرس محتويات في مقدمة الوثيقة يوضح الفصول والأقسام وأرقام صفحاتها.',
-    !longDoc ? r('na', `عدد الصفحات (${n}) لا يستلزم فهرساً.`) : tocHit ? r('pass', 'يوجد فهرس محتويات في مقدمة الوثيقة.') : r('fail', `وثيقة من ${n} صفحات بلا فهرس محتويات.`));
+    isXlsx ? r('na', 'ملف جداول (Excel) لا يستلزم فهرس محتويات.') : !longDoc ? r('na', `عدد الصفحات (${n}) لا يستلزم فهرساً.`) : tocHit ? r('pass', 'يوجد فهرس محتويات في مقدمة الوثيقة.') : r('fail', `وثيقة من ${n} صفحات بلا فهرس محتويات.`));
   const chapCount = findKw(ctx.doc, 'الفصل', C);
-  add('content','c-chapters','تقسيم الوثائق الطويلة إلى فصول مرقمة','minor', REF_D + ' · الفصل 5: ترقيم الفصول',
+  add('content','c-chapters','تقسيم الوثائق الطويلة إلى فصول مرقمة','minor', REFD + ' · الفصل 5: ترقيم الفصول',
     'تقسيم المتن إلى فصول مرقمة تسلسلياً (الفصل الأول، الفصل الثاني…) وعناوين فرعية هرمية (1-1، 1-2).',
-    n < 10 ? r('na', 'الوثيقة قصيرة.') : chapCount >= 2 ? r('pass', `رُصد ${chapCount} موضعاً لعناوين الفصول.`) : r('fail', 'لا توجد فصول مرقمة.'));
+    isXlsx ? r('na', 'لا ينطبق على ملفات Excel.') : n < 10 ? r('na', 'الوثيقة قصيرة.') : chapCount >= 2 ? r('pass', `رُصد ${chapCount} موضعاً لعناوين الفصول.`) : r('fail', 'لا توجد فصول مرقمة.'));
+
+  if (dept.types){
+    const inList = type && dept.types.includes(type.id);
+    add('content','c-dept-types','نوع الوثيقة ضمن الأنواع المعتمدة لوثائق الإدارة','minor', REFD + ' · الفصل 2: الوثائق المستخدمة داخل الإدارة',
+      `مراجعة تصنيف المخرج ضمن أنواع وثائق ${dept.name} المعتمدة، أو تحديث دليل الإدارة ليشمل النوع.`,
+      !type ? r('na', 'لم يُحدَّد نوع الوثيقة.') : inList ? r('pass', `النوع «${type.name}» من أنواع وثائق ${dept.name}.`) : r('partial', `النوع «${type.name}» غير مدرج ضمن أنواع وثائق ${dept.name}. ${dept.typesNote || ''}`.trim()));
+  }
 
   /* ===== المحور 3: التنسيق وإعداد الصفحات ===== */
-  const isA4 = pg => { const a = Math.min(pg.W, pg.H), b = Math.max(pg.W, pg.H); return Math.abs(a - 595.3) / 595.3 < 0.025 && Math.abs(b - 841.9) / 841.9 < 0.025; };
-  const a4n = an.pages.filter(isA4).length;
-  const sizeNote = `${Math.round(p1.W / 72 * 25.4)}×${Math.round(p1.H / 72 * 25.4)} مم`;
-  add('layout','l-a4','مقاس الورق A4','major', REF_D + ' · الفصل 6: الهوامش وإعداد الصفحة',
-    'ضبط مقاس الصفحة على A4 (21.0 × 29.7 سم) لجميع الصفحات.',
-    a4n === an.pages.length ? r('pass', 'جميع الصفحات بمقاس A4.') : a4n / an.pages.length >= 0.5 ? r('partial', `${a4n} من ${an.pages.length} صفحات بمقاس A4.`) : r('fail', `المقاس المرصود ${sizeNote}.`));
+  let a4Res;
+  if (isPdf){
+    const isA4 = pg => { const a = Math.min(pg.W, pg.H), b = Math.max(pg.W, pg.H); return Math.abs(a - 595.3) / 595.3 < 0.025 && Math.abs(b - 841.9) / 841.9 < 0.025; };
+    const a4n = an.pages.filter(isA4).length;
+    const sizeNote = `${Math.round(p1.W / 72 * 25.4)}×${Math.round(p1.H / 72 * 25.4)} مم`;
+    a4Res = a4n === an.pages.length ? r('pass', 'جميع الصفحات بمقاس A4.') : a4n / an.pages.length >= 0.5 ? r('partial', `${a4n} من ${an.pages.length} صفحات بمقاس A4.`) : r('fail', `المقاس المرصود ${sizeNote}.`);
+  } else if (isDocx){
+    const pg = an.page;
+    if (!pg) a4Res = r('na', 'لم تُحدَّد إعدادات الصفحة في الملف.');
+    else {
+      const a = Math.min(pg.w, pg.h), b = Math.max(pg.w, pg.h);
+      const ok = Math.abs(a - 11906) / 11906 < 0.02 && Math.abs(b - 16838) / 16838 < 0.02;
+      a4Res = ok ? r('pass', 'مقاس الصفحة A4' + (pg.landscape ? ' (عرضي).' : '.')) : r('fail', `المقاس المرصود ${(pg.w / TW * 2.54).toFixed(1)}×${(pg.h / TW * 2.54).toFixed(1)} سم.`);
+    }
+  } else {
+    a4Res = an.paperSize == null ? r('na', 'لم تُضبط إعدادات الطباعة في ورقة العمل.') : (an.paperSize === 9 ? r('pass', 'إعداد الطباعة على مقاس A4.') : r('fail', 'إعداد الطباعة على مقاس غير A4.'));
+  }
+  add('layout','l-a4','مقاس الورق A4','major', REFD + ' · الفصل 6: الهوامش وإعداد الصفحة',
+    isXlsx ? 'ضبط إعداد الطباعة في ورقة العمل على مقاس A4 قبل الاعتماد والأرشفة.' : 'ضبط مقاس الصفحة على A4 (21.0 × 29.7 سم) لجميع الصفحات.', a4Res);
 
   let numOk = 0, verOk = 0, hdrOk = 0, evalPages = 0;
-  inner.forEach((pg, k) => {
+  if (isPdf) inner.forEach((pg, k) => {
     evalPages++;
     const foot = regionText(pg, i => i.yTop > 0.86);
     const nums = extractNumbers(foot);
@@ -899,49 +969,73 @@ function evaluate(ctx, meta){
   });
   const ratio = (x) => evalPages ? x / evalPages : 0;
   const tier = (x, hi, lo) => x >= hi ? 'pass' : x >= lo ? 'partial' : 'fail';
-  add('layout','l-pagenum','ترقيم الصفحات بصيغة (الصفحة س من ص) أسفل الصفحة','major', REF_D + ' · الفصل 5: ترقيم الصفحات',
-    'ترقيم جميع الصفحات عدا الغلاف أسفل منتصف الصفحة بصيغة «الصفحة 3 من 25».',
-    !evalPages ? r('na', 'وثيقة من صفحة واحدة.') : r(tier(ratio(numOk), 0.7, 0.3), `الترقيم مرصود في ${numOk} من ${evalPages} صفحات داخلية.`));
-  add('layout','l-footver','رقم الإصدار في تذييل الصفحات','major', REF_D + ' · الفصل 5: طريقة كتابة رقم الإصدار',
-    'إثبات رقم الإصدار في تذييل كل صفحة، مثل: «إصدار 01 | 16/07/2026م».',
-    !evalPages ? r('na', 'وثيقة من صفحة واحدة.') : r(tier(ratio(verOk), 0.7, 0.3), `رقم الإصدار مرصود في تذييل ${verOk} من ${evalPages} صفحات.`));
-  add('layout','l-header','الشعار المصغر في رأس الصفحات الداخلية','minor', REF_D + ' · الفصل 6: استخدام شعار الجمعية',
-    'إضافة الشعار بحجم مصغر (1.5 سم) في رأس الصفحات الداخلية.',
-    !evalPages ? r('na', 'وثيقة من صفحة واحدة.') : r(tier(ratio(hdrOk), 0.7, 0.3), `رأس الصفحة يحمل الشعار/اسم الجمعية في ${hdrOk} من ${evalPages} صفحات.`));
+  const footCorpus = isPdf ? null : (() => { const c = new Corpus(an.scopes.footer); C.addTokens(c.tokens); return c; })();
+  const headCorpus = isPdf ? null : (() => { const c = new Corpus(an.scopes.header); C.addTokens(c.tokens); return c; })();
+  let numRes, verFootRes, headRes;
+  if (isPdf){
+    numRes = !evalPages ? r('na', 'وثيقة من صفحة واحدة.') : r(tier(ratio(numOk), 0.7, 0.3), `الترقيم مرصود في ${numOk} من ${evalPages} صفحات داخلية.`);
+    verFootRes = !evalPages ? r('na', 'وثيقة من صفحة واحدة.') : r(tier(ratio(verOk), 0.7, 0.3), `رقم الإصدار مرصود في تذييل ${verOk} من ${evalPages} صفحات.`);
+    headRes = !evalPages ? r('na', 'وثيقة من صفحة واحدة.') : r(tier(ratio(hdrOk), 0.7, 0.3), `رأس الصفحة يحمل الشعار/اسم الجمعية في ${hdrOk} من ${evalPages} صفحات.`);
+  } else {
+    const footTxt = norm(an.scopes.footer);
+    numRes = an.pageField ? (an.totalField || /من/.test(footTxt) ? r('pass', 'حقل ترقيم الصفحات موجود في التذييل بصيغة (الصفحة س من ص).') : r('partial', 'يوجد حقل رقم الصفحة دون إجمالي الصفحات.'))
+      : r('fail', isXlsx ? 'لا يوجد ترقيم صفحات في إعداد رأس/تذييل ورقة العمل.' : 'لا يوجد حقل ترقيم صفحات في تذييل المستند.');
+    verFootRes = anyKw(footCorpus, ['اصدار', 'الاصدار', 'version'], C) ? r('pass', 'رقم الإصدار مثبت في التذييل.') : r('fail', 'لا يوجد رقم إصدار في التذييل.');
+    headRes = an.images.header ? r('pass', 'الشعار مدرج في رأس الصفحة.')
+      : anyKw(headCorpus, ['سمو', 'تحفيظ القران', 'الجمعيه'], C) ? r('partial', 'رأس الصفحة يحمل اسم الجمعية دون الشعار.')
+      : r('fail', isXlsx ? 'لم يُضبط رأس ورقة العمل بعناصر الهوية.' : 'لا يوجد شعار أو اسم الجمعية في رأس الصفحة.');
+  }
+  add('layout','l-pagenum','ترقيم الصفحات بصيغة (الصفحة س من ص) أسفل الصفحة','major', REFD + ' · الفصل 5: ترقيم الصفحات',
+    'ترقيم جميع الصفحات عدا الغلاف أسفل منتصف الصفحة بصيغة «الصفحة 3 من 25».', numRes);
+  add('layout','l-footver','رقم الإصدار في تذييل الصفحات','major', REFD + ' · الفصل 5: طريقة كتابة رقم الإصدار',
+    'إثبات رقم الإصدار في تذييل كل صفحة، مثل: «إصدار 01 | 16/07/2026م».', verFootRes);
+  add('layout','l-header','الشعار المصغر في رأس الصفحات الداخلية','minor', REFD + ' · الفصل 6: استخدام شعار الجمعية',
+    'إضافة الشعار بحجم مصغر (1.5 سم) في رأس الصفحات الداخلية.', headRes);
 
   const fontTotal = Object.values(an.docFonts).reduce((a, b) => a + b, 0);
   const majalla = Object.entries(an.docFonts).filter(([k]) => /majalla|مجلة|sakkal/i.test(k)).reduce((a, [, v]) => a + v, 0);
   const namedFonts = Object.keys(an.docFonts).filter(k => k && !/^(sans-serif|serif|monospace)$/i.test(k));
   const topFonts = Object.entries(an.docFonts).filter(([k]) => k).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k.replace(/^[A-Z]{6}\+/, '').replace(/[-,](Bold|Regular|Italic).*$/i, ''));
-  add('layout','l-font','الخط الرسمي Sakkal Majalla','minor', REF_D + ' · الفصل 6: الخطوط',
+  add('layout','l-font','الخط الرسمي Sakkal Majalla','minor', REFD + ' · الفصل 6: الخطوط',
     'اعتماد خط Sakkal Majalla للعناوين (18/16 غامق) والمتن (15) والجداول (14) والتذييل (12).',
     !fontTotal || !namedFonts.length ? r('na', 'لا تتوفر بيانات خطوط قابلة للقراءة في الملف.') :
       r(tier(majalla / fontTotal, 0.6, 0.2), majalla / fontTotal >= 0.6 ? 'الخط الرسمي هو الغالب في الوثيقة.' : `الخط الغالب: ${topFonts.join('، ') || 'غير معروف'}.`));
 
-  let marginOk = 0, marginPages = 0; const marginSamples = [];
-  for (const pg of an.pages.slice(n > 1 ? 1 : 0)){
-    const body = pg.items.filter(i => i.yTop > 0.1 && i.yBot < 0.9 && i.s.trim().length > 2);
-    if (body.length < 5) continue;
-    marginPages++;
-    const xs1 = body.map(i => i.x1).sort((a, b) => a - b), xs0 = body.map(i => i.x0).sort((a, b) => a - b);
-    const rightM = (1 - xs1[Math.floor(xs1.length * 0.98)]) * pg.W / 72 * 2.54;
-    const leftM = xs0[Math.floor(xs0.length * 0.02)] * pg.W / 72 * 2.54;
-    marginSamples.push([rightM, leftM]);
-    if (rightM >= 2.0 && leftM >= 1.5) marginOk++;
+  let marginRes;
+  if (isPdf){
+    let marginOk = 0, marginPages = 0; const marginSamples = [];
+    for (const pg of an.pages.slice(n > 1 ? 1 : 0)){
+      const body = pg.items.filter(i => i.yTop > 0.1 && i.yBot < 0.9 && i.s.trim().length > 2);
+      if (body.length < 5) continue;
+      marginPages++;
+      const xs1 = body.map(i => i.x1).sort((a, b) => a - b), xs0 = body.map(i => i.x0).sort((a, b) => a - b);
+      const rightM = (1 - xs1[Math.floor(xs1.length * 0.98)]) * pg.W / 72 * 2.54;
+      const leftM = xs0[Math.floor(xs0.length * 0.02)] * pg.W / 72 * 2.54;
+      marginSamples.push([rightM, leftM]);
+      if (rightM >= 2.0 && leftM >= 1.5) marginOk++;
+    }
+    marginRes = !marginPages ? r('na', 'نص غير كافٍ لقياس الهوامش.') : r(tier(marginOk / marginPages, 0.7, 0.4), (() => { const med = (k) => { const a = marginSamples.map(x => x[k]).sort((p, q) => p - q); return a[Math.floor(a.length / 2)].toFixed(1); }; return `الهوامش مطابقة في ${marginOk} من ${marginPages} صفحات · الوسيط المقاس: يمين ${med(0)} سم، يسار ${med(1)} سم.`; })());
+  } else {
+    const m = an.margins;
+    if (!m) marginRes = r('na', 'لا تتوفر بيانات هوامش في الملف.');
+    else {
+      const cm = isDocx ? { top: twToCm(m.top), bottom: twToCm(m.bottom), right: twToCm(m.right), left: twToCm(m.left) } : m;
+      const ok = cm.right >= 2.2 && cm.left >= 1.7 && cm.top >= 2.2 && cm.bottom >= 2.2;
+      const near2 = cm.right >= 1.7 && cm.left >= 1.4 && cm.top >= 1.7 && cm.bottom >= 1.7;
+      const note = `المقاس: أعلى ${cm.top.toFixed(1)} · أسفل ${cm.bottom.toFixed(1)} · يمين ${cm.right.toFixed(1)} · يسار ${cm.left.toFixed(1)} سم.`;
+      marginRes = ok ? r('pass', note) : near2 ? r('partial', 'الهوامش أقل من المعتمد بقليل — ' + note) : r('fail', 'الهوامش مخالفة للمعتمد — ' + note);
+    }
   }
-  add('layout','l-margins','الهوامش المعتمدة (2.5 سم يمين/أعلى/أسفل · 2 سم يسار)','minor', REF_D + ' · الفصل 6: الهوامش وإعداد الصفحة',
-    'ضبط الهوامش: 2.5 سم من الأعلى والأسفل واليمين، و2 سم من اليسار.',
-    !marginPages ? r('na', 'نص غير كافٍ لقياس الهوامش.') : r(tier(marginOk / marginPages, 0.7, 0.4), (() => { const med = (k) => { const a = marginSamples.map(x => x[k]).sort((p, q) => p - q); return a[Math.floor(a.length / 2)].toFixed(1); }; return `الهوامش مطابقة في ${marginOk} من ${marginPages} صفحات · الوسيط المقاس: يمين ${med(0)} سم، يسار ${med(1)} سم.`; })()));
-
-  const appendixNum = /ملحق\s*(?:رقم\s*)?\d/.test(toLatinDigits(norm(pagesText(an, an.pages.map((_, i) => i)))));
+  const appendixNum = /ملحق\s*(?:رقم\s*)?\d/.test(toLatinDigits(norm(isPdf ? pagesText(an, an.pages.map((_, i) => i)) : an.scopes.all)));
   const appendixAny = findKw(ctx.doc, 'ملحق', C) > 0;
-  add('layout','l-appendix','ترقيم الملاحق بالأحرف (ملحق أ، ملحق ب)','minor', REF_D + ' · الفصل 5: طريقة كتابة الملاحق',
+  add('layout','l-appendix','ترقيم الملاحق بالأحرف (ملحق أ، ملحق ب)','minor', REFD + ' · الفصل 5: طريقة كتابة الملاحق',
     'ترقيم الملاحق بالأحرف لا بالأرقام، والإشارة إليها من المتن عند أول ذكر.',
     !appendixAny ? r('na', 'لا توجد ملاحق.') : appendixNum ? r('fail', 'الملاحق مرقمة بالأرقام.') : r('pass', 'لم تُرصد ملاحق مرقمة بالأرقام.'));
 
   /* ===== المحور 4: الهوية البصرية ===== */
-  const colorAgg = {};
-  for (const pg of an.pages){ for (const src of [pg.textColors, pg.shapeColors]) for (const [k, v] of Object.entries(src)) colorAgg[k] = (colorAgg[k] || 0) + v; }
+  let colorAgg = {};
+  if (isPdf){ for (const pg of an.pages){ for (const src of [pg.textColors, pg.shapeColors]) for (const [k, v] of Object.entries(src)) colorAgg[k] = (colorAgg[k] || 0) + v; } }
+  else colorAgg = an.colors || {};
   const colors = Object.entries(colorAgg).map(([k, v]) => ({ c: k.split(',').map(Number), v }));
   const near = (ref, tol) => colors.filter(x => dist(x.c, ref) <= tol).reduce((a, x) => a + x.v, 0);
   const greenUse = near(PAL.green, 42), goldUse = near(PAL.gold, 36);
@@ -950,19 +1044,22 @@ function evaluate(ctx, meta){
   const chromTotal = chromatic.reduce((a, x) => a + x.v, 0);
   const offPal = chromatic.filter(x => !palette.some(p => dist(p, x.c) <= 48)).reduce((a, x) => a + x.v, 0);
   const noVector = colors.length === 0;
-  add('identity','v-green','الأخضر المؤسسي (#0B5D3B) للعناوين وترويسة الجداول','major', REF_D + ' · الفصل 6: الألوان',
+  add('identity','v-green','الأخضر المؤسسي (#0B5D3B) للعناوين وترويسة الجداول','major', REFD + ' · الفصل 6: الألوان',
     'استخدام الأخضر المؤسسي الغامق #0B5D3B للعناوين الرئيسية وخلفيات ترويسة الجداول.',
-    noVector ? r('na', 'الوثيقة بلا طبقة ألوان متجهة (قد تكون ممسوحة ضوئياً).') : greenUse > 0 ? r('pass', `اللون مستخدم في ${greenUse} عنصراً.`) : r('fail', 'لم يُرصد الأخضر المؤسسي في النصوص أو الجداول.'));
-  add('identity','v-gold','الذهبي (#B08D57) للعناوين الفرعية والتمييز الثانوي','minor', REF_D + ' · الفصل 6: الألوان',
+    noVector ? r('na', isPdf ? 'الوثيقة بلا طبقة ألوان متجهة (قد تكون ممسوحة ضوئياً).' : 'لا توجد ألوان معرَّفة في الملف.') : greenUse > 0 ? r('pass', `اللون مستخدم في ${greenUse} عنصراً.`) : r('fail', 'لم يُرصد الأخضر المؤسسي في النصوص أو الجداول.'));
+  add('identity','v-gold','الذهبي (#B08D57) للعناوين الفرعية والتمييز الثانوي','minor', REFD + ' · الفصل 6: الألوان',
     'استخدام اللون الذهبي #B08D57 للعناوين الفرعية الثانوية والفواصل.',
     noVector ? r('na', 'لا تتوفر طبقة ألوان.') : goldUse > 0 ? r('pass', `اللون مستخدم في ${goldUse} عنصراً.`) : r('fail', 'لم يُرصد اللون الذهبي المعتمد.'));
   const offRatio = chromTotal ? offPal / chromTotal : 0;
-  add('identity','v-palette','الالتزام بالمنظومة اللونية المعتمدة','minor', REF_D + ' · الفصل 6: الألوان (ملاحظة تطبيقية)',
+  add('identity','v-palette','الالتزام بالمنظومة اللونية المعتمدة','minor', REFD + ' · الفصل 6: الألوان (ملاحظة تطبيقية)',
     'حصر الألوان في المنظومة المعتمدة: الأخضر المؤسسي، الذهبي، الرمادي الفاتح، الكهرماني، الأحمر العنابي، الأسود شبه الداكن.',
     noVector || !chromTotal ? r('na', 'لا توجد ألوان مميزة كافية للقياس.') : r(offRatio <= 0.15 ? 'pass' : offRatio <= 0.4 ? 'partial' : 'fail', `نسبة الألوان خارج المنظومة ${Math.round(offRatio * 100)}٪ من العناصر الملونة.`));
-  add('identity','v-logo-inner','حضور الهوية في جميع الصفحات','minor', REF_D + ' · الفصل 6: الهوية المؤسسية للوثائق',
+  add('identity','v-logo-inner','حضور الهوية في جميع الصفحات','minor', REFD + ' · الفصل 6: الهوية المؤسسية للوثائق',
     'توحيد رأس وتذييل الصفحات بعناصر الهوية (الشعار المصغر، اسم الوثيقة والجمعية).',
-    !evalPages ? r('na', 'وثيقة من صفحة واحدة.') : r(tier(ratio(hdrOk), 0.9, 0.5), `عناصر الهوية حاضرة في ${hdrOk} من ${evalPages} صفحات داخلية.`));
+    isPdf ? (!evalPages ? r('na', 'وثيقة من صفحة واحدة.') : r(tier(ratio(hdrOk), 0.9, 0.5), `عناصر الهوية حاضرة في ${hdrOk} من ${evalPages} صفحات داخلية.`))
+      : (an.images.header ? r('pass', 'رأس/تذييل الملف موحد بعناصر الهوية (الشعار والاسم).')
+        : (an.scopes.header.trim() || an.scopes.footer.trim()) ? r('partial', 'رأس/تذييل الملف يحمل بعض عناصر الهوية دون الشعار.')
+        : r('fail', 'لا توجد عناصر هوية في رأس أو تذييل الملف.')));
 
   /* ===== المحور 5: التسمية والإصدار والحوكمة ===== */
   const segs = ctx.segs;
@@ -972,36 +1069,36 @@ function evaluate(ctx, meta){
   if (segs.length >= 4 && segType && segYear) fnRes = r('pass', 'الاسم مطابق للنمط المعتمد.');
   else if (segs.length >= 3 && (segType || segYear)) fnRes = r('partial', 'الاسم قريب من النمط لكن ينقصه: ' + [segs.length < 4 && 'عدد المقاطع', !segType && 'نوع الوثيقة في البداية', !segYear && 'سنة الإصدار في النهاية'].filter(Boolean).join('، ') + '.');
   else fnRes = r('fail', 'الاسم لا يتبع النمط [نوع الوثيقة]_[الموضوع]_[الإدارة]_[السنة].');
-  add('gov','g-filename','تسمية الملف: [نوع الوثيقة]_[الموضوع المختصر]_[الإدارة]_[سنة الإصدار]','major', REF_D + ' · الفصل 5: طريقة تسمية الملفات',
+  add('gov','g-filename','تسمية الملف: [نوع الوثيقة]_[الموضوع المختصر]_[الإدارة]_[سنة الإصدار]','major', REFD + ' · الفصل 5: طريقة تسمية الملفات',
     'إعادة تسمية الملف وفق النمط، مثال: «إجراء_إدارة الاجتماعات_الاستدامة_2026».', fnRes);
 
   const bad = norm(ctx.baseName).match(/نهائي|مسوده|مسودة|final|draft|copy|نسخه|جديد|new|\(\d+\)|\bv\d\b/i);
-  add('gov','g-generic','خلو اسم الملف من العبارات العامة (نهائي، مسودة، نسخة…)','major', REF_D + ' · الفصل 5: طريقة تسمية الملفات',
+  add('gov','g-generic','خلو اسم الملف من العبارات العامة (نهائي، مسودة، نسخة…)','major', REFD + ' · الفصل 5: طريقة تسمية الملفات',
     'حذف العبارات غير الدالة مثل «نسخة نهائية» و«مسودة 2» و«(1)» من اسم الملف الرسمي.',
     bad ? r('fail', `يحتوي الاسم على «${bad[0]}».`) : r('pass', 'لا توجد عبارات عامة في الاسم.'));
 
   const nowY = new Date().getFullYear();
   const fileYear = segYear ? +segYear[1] : (toLatinDigits(ctx.baseName).match(/(20\d{2})/) || [])[1];
   const refYear = yr >= 2000 ? yr : nowY;
-  add('gov','g-year','تاريخ/سنة الملف تعكس تاريخ الاعتماد الفعلي','major', REF_D + ' · الفصل 5: طريقة تسمية الملفات',
+  add('gov','g-year','تاريخ/سنة الملف تعكس تاريخ الاعتماد الفعلي','major', REFD + ' · الفصل 5: طريقة تسمية الملفات',
     'تحديث السنة في اسم الملف ومحتواه لتطابق سنة الاعتماد الفعلية، وعدم استخدام ملف مؤرخ بسنة سابقة لتغطية مخرجات حالية.',
     !fileYear ? r('na', 'لا توجد سنة في اسم الملف (مرصود ضمن فحص التسمية).') : (+fileYear < refYear ? r('fail', `سنة الملف ${fileYear} أقدم من سنة الاعتماد/الإصدار ${refYear}.`) : r('pass', `سنة الملف ${fileYear}.`)));
 
   const vfmt = verRaw ? (/^\d{2}(\.\d)?$/.test(verRaw) || /^\d\.\d$/.test(verRaw) ? 'pass' : 'partial') : 'fail';
-  add('gov','g-verfmt','صيغة رقم الإصدار (01 · 02 · 01.1)','minor', REF_D + ' · الفصل 5: طريقة إصدار النسخ',
+  add('gov','g-verfmt','صيغة رقم الإصدار (01 · 02 · 01.1)','minor', REFD + ' · الفصل 5: طريقة إصدار النسخ',
     'البدء بالإصدار 01، وزيادته بوحدة كاملة عند كل تحديث جوهري، واستخدام الأرقام الفرعية (01.1) للتعديلات الطفيفة.',
     r(vfmt, verRaw ? `الصيغة المرصودة: «${verRaw}».` : 'لم يُرصد رقم إصدار.'));
 
   const verNum = parseFloat(verRaw || '0');
   const logHit = anyKw(ctx.doc, ['سجل الاصدارات', 'سجل التغييرات', 'سجل التعديلات', 'تاريخ الاصدارات', 'سجل التحديثات'], C);
-  add('gov','g-changelog','سجل الإصدارات والتغييرات عند التحديث','major', REF_D + ' · الفصل 2: تحديثها / الفصل 5: تاريخ الاعتماد',
+  add('gov','g-changelog','سجل الإصدارات والتغييرات عند التحديث','major', REFD + ' · الفصل 2: تحديثها / الفصل 5: تاريخ الاعتماد',
     'إضافة جدول «سجل الإصدارات» يوثق رقم كل إصدار وتاريخ اعتماده وملخص التغييرات.',
     verNum >= 2 ? (logHit ? r('pass', 'يوجد سجل إصدارات.') : r('fail', `الإصدار ${verRaw} بلا سجل تغييرات موثق.`)) : (logHit ? r('pass', 'يوجد سجل إصدارات.') : r('na', 'إصدار أول لا يستلزم سجل تغييرات.')));
 
   const q = ctx.quality;
-  add('gov','g-lang','الكتابة باللغة العربية الفصحى وبنص قابل للبحث','minor', REF_D + ' · الفصل 5: طريقة كتابة الوثيقة',
+  add('gov','g-lang','الكتابة باللغة العربية الفصحى وبنص قابل للبحث','minor', REFD + ' · الفصل 5: طريقة كتابة الوثيقة',
     'إصدار الوثيقة من ملف نصي (لا صورة ممسوحة) باللغة العربية الفصحى وبأسلوب إداري رسمي.',
-    q.charsPerPage < 40 && !ctx.ocrUsed ? r('fail', 'الملف يبدو صوراً ممسوحة دون طبقة نص.') : q.arabicRatio >= 0.5 ? r('pass', `نسبة النص العربي ${Math.round(q.arabicRatio * 100)}٪.`) : r('partial', `نسبة النص العربي ${Math.round(q.arabicRatio * 100)}٪ فقط.`));
+    isPdf && q.charsPerPage < 40 && !ctx.ocrUsed ? r('fail', 'الملف يبدو صوراً ممسوحة دون طبقة نص.') : q.arabicRatio >= 0.5 ? r('pass', `نسبة النص العربي ${Math.round(q.arabicRatio * 100)}٪.`) : r('partial', `نسبة النص العربي ${Math.round(q.arabicRatio * 100)}٪ فقط.`));
 
   /* ===== الحساب ===== */
   const val = { pass: 1, partial: 0.5, fail: 0 };
@@ -1022,7 +1119,196 @@ function evaluate(ctx, meta){
   const gaps = checks.filter(c => c.status === 'fail' || c.status === 'partial')
     .sort((a, b) => SEV[b.sev].w - SEV[a.sev].w || (a.status === 'fail' ? -1 : 1));
   let band = score >= 90 ? 'ممتاز' : score >= 80 ? 'جيد جداً' : score >= 60 ? 'يحتاج استكمال' : 'ضعيف';
-  return { checks, axisStats, score, passed, critFails, counts, gaps, band, type, matrixLabel };
+  return { checks, axisStats, score, passed, critFails, counts, gaps, band, type, matrixLabel, dept, deptGuide: REFD, kind, fmtName };
+}
+
+/* ================= قارئات الصيغ: Word و Excel ================= */
+const TW = 1440;                       // تويب لكل بوصة
+const twToCm = t => t / TW * 2.54;
+const xmlOf = str => new DOMParser().parseFromString(str, 'application/xml');
+const tagText = (el, tag) => Array.from(el.getElementsByTagName(tag)).map(n => n.textContent).join('');
+const attr = (el, a) => (el && el.getAttribute(a)) || '';
+function hexOk(h){ return /^[0-9a-fA-F]{6}$/.test(h || ''); }
+function hexToRgbArr(h){ return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]; }
+
+async function loadJsZip(){
+  if (window.JSZip) return window.JSZip;
+  await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; s.onload = res; s.onerror = () => rej(new Error('jszip')); document.head.appendChild(s); });
+  if (!window.JSZip) throw new Error('jszip');
+  return window.JSZip;
+}
+
+/* ---------- Word (.docx) ---------- */
+async function analyzeDocx(file, onStep){
+  const JSZipLib = await loadJsZip();
+  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
+  const readXml = async p => { const f = zip.file(p); return f ? xmlOf(await f.async('string')) : null; };
+  const docXml = await readXml('word/document.xml');
+  if (!docXml || docXml.getElementsByTagName('parsererror').length) throw new Error('bad-docx');
+  onStep && onStep(1, 4);
+
+  // النصوص حسب الفقرات (تشمل خلايا الجداول بترتيب ورودها)
+  const paras = Array.from(docXml.getElementsByTagName('w:p'));
+  const lines = [];
+  const paraHasImage = [];
+  for (const p of paras){
+    const t = tagText(p, 'w:t').trim();
+    paraHasImage.push(p.getElementsByTagName('w:drawing').length > 0 || p.getElementsByTagName('w:pict').length > 0);
+    if (t) lines.push(t);
+  }
+  const bodyText = lines.join('\n');
+
+  // الخطوط
+  const stylesXml = await readXml('word/styles.xml');
+  let defFont = '';
+  if (stylesXml){
+    const dd = stylesXml.getElementsByTagName('w:docDefaults')[0];
+    const rf = dd && dd.getElementsByTagName('w:rFonts')[0];
+    defFont = rf ? (attr(rf, 'w:cs') || attr(rf, 'w:ascii') || attr(rf, 'w:asciiTheme')) : '';
+  }
+  const fonts = {}; const colors = {};
+  const addColor = (h, n) => { if (!hexOk(h)) return; const k = hexToRgbArr(h).join(','); colors[k] = (colors[k] || 0) + (n || 1); };
+  for (const r of Array.from(docXml.getElementsByTagName('w:r'))){
+    const txt = tagText(r, 'w:t'); const len = txt.trim().length;
+    const rf = r.getElementsByTagName('w:rFonts')[0];
+    const fn = (rf && (attr(rf, 'w:cs') || attr(rf, 'w:ascii'))) || defFont || '';
+    if (len) fonts[fn] = (fonts[fn] || 0) + len;
+    const col = r.getElementsByTagName('w:color')[0];
+    if (col && len) addColor(attr(col, 'w:val'), 1);
+    const shd = r.getElementsByTagName('w:shd')[0];
+    if (shd) addColor(attr(shd, 'w:fill'), 1);
+  }
+  for (const shd of Array.from(docXml.getElementsByTagName('w:shd'))) addColor(attr(shd, 'w:fill'), 1);
+  onStep && onStep(2, 4);
+
+  // إعداد الصفحة
+  const sect = Array.from(docXml.getElementsByTagName('w:sectPr')).pop();
+  const pgSz = sect && sect.getElementsByTagName('w:pgSz')[0];
+  const pgMar = sect && sect.getElementsByTagName('w:pgMar')[0];
+  const page = pgSz ? { w: +attr(pgSz, 'w:w') || 0, h: +attr(pgSz, 'w:h') || 0, landscape: attr(pgSz, 'w:orient') === 'landscape' } : null;
+  const margins = pgMar ? { top: +attr(pgMar, 'w:top') || 0, bottom: +attr(pgMar, 'w:bottom') || 0, right: +attr(pgMar, 'w:right') || 0, left: +attr(pgMar, 'w:left') || 0 } : null;
+
+  // الترويسة والتذييل
+  let headerText = '', footerText = '', headerImg = false, footerImg = false, pageField = false, totalField = false;
+  for (const name of Object.keys(zip.files)){
+    if (!/^word\/(header|footer)\d*\.xml$/.test(name)) continue;
+    const x = await readXml(name); if (!x) continue;
+    const txt = Array.from(x.getElementsByTagName('w:p')).map(p => tagText(p, 'w:t')).join(' ');
+    const instr = Array.from(x.getElementsByTagName('w:instrText')).map(n => n.textContent).join(' ') + ' ' +
+      Array.from(x.getElementsByTagName('w:fldSimple')).map(n => attr(n, 'w:instr')).join(' ');
+    const hasImg = x.getElementsByTagName('w:drawing').length > 0 || x.getElementsByTagName('w:pict').length > 0;
+    if (/header/.test(name)){ headerText += ' ' + txt; headerImg = headerImg || hasImg; }
+    else {
+      footerText += ' ' + txt; footerImg = footerImg || hasImg;
+      if (/\bPAGE\b/i.test(instr)) pageField = true;
+      if (/NUMPAGES/i.test(instr)) totalField = true;
+    }
+  }
+  // عدد الصفحات كما حفظه Word
+  const appXml = await readXml('docProps/app.xml');
+  const numPages = appXml ? (+tagText(appXml, 'Pages') || null) : null;
+  const coreXml = await readXml('docProps/core.xml');
+  const docTitle = coreXml ? tagText(coreXml, 'dc:title') : '';
+  const mediaCount = Object.keys(zip.files).filter(n => /^word\/media\//.test(n)).length;
+  const coverImg = paraHasImage.slice(0, 18).some(Boolean);
+  const tables = docXml.getElementsByTagName('w:tbl').length;
+  onStep && onStep(4, 4);
+
+  const cover = lines.slice(0, 45).join('\n') + '\n' + headerText;
+  const back = lines.slice(-30).join('\n');
+  const all = [docTitle, bodyText, headerText, footerText].join('\n');
+  return {
+    kind: 'docx', kindName: 'Word', numPages, pages: [], docFonts: fonts, thumbCanvas: null, truncated: false,
+    scopes: { cover, front: lines.slice(0, 120).join('\n'), back, all, approval: cover + '\n' + back + '\n' + footerText, header: headerText, footer: footerText },
+    colors, images: { cover: coverImg, header: headerImg, total: mediaCount },
+    page, margins, pageField, totalField, tables, lineCount: lines.length, docTitle,
+    charCount: bodyText.length
+  };
+}
+
+/* ---------- Excel (.xlsx) ---------- */
+async function analyzeXlsx(file, onStep){
+  const JSZipLib = await loadJsZip();
+  const zip = await JSZipLib.loadAsync(await file.arrayBuffer());
+  const readXml = async p => { const f = zip.file(p); return f ? xmlOf(await f.async('string')) : null; };
+  const wb = await readXml('xl/workbook.xml');
+  if (!wb) throw new Error('bad-xlsx');
+  onStep && onStep(1, 4);
+  // النصوص المشتركة
+  const ssXml = await readXml('xl/sharedStrings.xml');
+  const shared = ssXml ? Array.from(ssXml.getElementsByTagName('si')).map(si => Array.from(si.getElementsByTagName('t')).map(t => t.textContent).join('')) : [];
+  const rels = await readXml('xl/_rels/workbook.xml.rels');
+  const relMap = {};
+  if (rels) for (const r of Array.from(rels.getElementsByTagName('Relationship'))) relMap[attr(r, 'Id')] = attr(r, 'Target').replace(/^\//, '').replace(/^xl\//, '');
+  const sheetEls = Array.from(wb.getElementsByTagName('sheet'));
+  const sheets = [];
+  let headerText = '', footerText = '', pageField = false, totalField = false, paperSize = null, margins = null, firstRows = '';
+  for (let i = 0; i < sheetEls.length && i < 20; i++){
+    const nameAttr = attr(sheetEls[i], 'name');
+    const rid = sheetEls[i].getAttribute('r:id') || sheetEls[i].getAttributeNS && sheetEls[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+    const target = relMap[rid] || `worksheets/sheet${i + 1}.xml`;
+    const sx = await readXml('xl/' + target); if (!sx) continue;
+    const rows = Array.from(sx.getElementsByTagName('row'));
+    const rowTexts = rows.map(row => Array.from(row.getElementsByTagName('c')).map(c => {
+      const t = attr(c, 't');
+      if (t === 's'){ const v = c.getElementsByTagName('v')[0]; return v ? (shared[+v.textContent] || '') : ''; }
+      if (t === 'inlineStr'){ return tagText(c, 't'); }
+      const v = c.getElementsByTagName('v')[0]; return v ? v.textContent : '';
+    }).filter(x => x !== '').join(' | ')).filter(Boolean);
+    const hf = sx.getElementsByTagName('headerFooter')[0];
+    if (hf){
+      const oh = tagText(hf, 'oddHeader'), of = tagText(hf, 'oddFooter');
+      headerText += ' ' + oh; footerText += ' ' + of;
+      if (/&P/.test(of + oh)) pageField = true;
+      if (/&N/.test(of + oh)) totalField = true;
+    }
+    const ps = sx.getElementsByTagName('pageSetup')[0];
+    if (ps && paperSize == null) paperSize = +attr(ps, 'paperSize') || null;
+    const pm = sx.getElementsByTagName('pageMargins')[0];
+    if (pm && !margins) margins = { top: +attr(pm, 'top') * 2.54, bottom: +attr(pm, 'bottom') * 2.54, right: +attr(pm, 'right') * 2.54, left: +attr(pm, 'left') * 2.54 };
+    if (i === 0) firstRows = rowTexts.slice(0, 12).join('\n');
+    sheets.push({ name: nameAttr, rows: rowTexts.length, text: nameAttr + '\n' + rowTexts.join('\n') });
+    onStep && onStep(2, 4);
+  }
+  // الخطوط والألوان من ملف الأنماط
+  const st = await readXml('xl/styles.xml');
+  const fonts = {}, colors = {};
+  const addColor = (h, n) => { if (!h) return; const hh = h.length === 8 ? h.slice(2) : h; if (!hexOk(hh)) return; const k = hexToRgbArr(hh).join(','); colors[k] = (colors[k] || 0) + (n || 1); };
+  if (st){
+    for (const f of Array.from(st.getElementsByTagName('font'))){
+      const nm = attr(f.getElementsByTagName('name')[0], 'val');
+      if (nm) fonts[nm] = (fonts[nm] || 0) + 10;
+      addColor(attr(f.getElementsByTagName('color')[0], 'rgb'), 1);
+    }
+    for (const fl of Array.from(st.getElementsByTagName('fgColor'))) addColor(attr(fl, 'rgb'), 1);
+  }
+  const mediaCount = Object.keys(zip.files).filter(n => /^xl\/media\//.test(n)).length;
+  const allText = sheets.map(s => s.text).join('\n');
+  onStep && onStep(4, 4);
+  return {
+    kind: 'xlsx', kindName: 'Excel', numPages: sheets.length, pages: [], docFonts: fonts, thumbCanvas: null, truncated: false,
+    scopes: { cover: firstRows + '\n' + headerText, front: sheets[0] ? sheets[0].text.slice(0, 4000) : '', back: allText.slice(-3000), all: allText + '\n' + headerText + '\n' + footerText, approval: firstRows + '\n' + headerText + '\n' + footerText + '\n' + allText.slice(-3000), header: headerText, footer: footerText },
+    colors, images: { cover: mediaCount > 0, header: false, total: mediaCount },
+    page: null, margins, pageField, totalField, paperSize, sheets, charCount: allText.length
+  };
+}
+
+/* ---------- موزّع حسب الصيغة ---------- */
+function fileKind(file){
+  const n = (file.name || '').toLowerCase();
+  if (/\.pdf$/.test(n) || file.type === 'application/pdf') return 'pdf';
+  if (/\.docx$/.test(n) || /wordprocessingml/.test(file.type || '')) return 'docx';
+  if (/\.xlsx$/.test(n) || /spreadsheetml/.test(file.type || '')) return 'xlsx';
+  if (/\.(doc|xls)$/.test(n)) return 'legacy';
+  return '';
+}
+async function analyzeFile(file, onStep){
+  const k = fileKind(file);
+  if (k === 'pdf') return analyzePdf(file, onStep);
+  if (k === 'docx') return analyzeDocx(file, (i, n) => onStep && onStep('text', i, n));
+  if (k === 'xlsx') return analyzeXlsx(file, (i, n) => onStep && onStep('text', i, n));
+  if (k === 'legacy') throw new Error('legacy-format');
+  throw new Error('unsupported-format');
 }
 
 /* ================= الواجهة ================= */
@@ -1041,8 +1327,13 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = fals
 
 /* ---------- القوائم ---------- */
 $('#mType').innerHTML = '<option value="">غير محدد</option>' + TYPES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-$('#deptList').innerHTML = DEPTS.map(d => `<option value="${d}">`).join('');
-$('#secList').innerHTML = SECTIONS.map(s => `<option value="${s[0]}">`).join('');
+$('#mDept').innerHTML = DEPARTMENTS.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+function fillSections(deptId){
+  const d = DEPT_BY_ID[deptId];
+  const list = d && d.sections.length ? d.sections : ALL_SECTIONS;
+  $('#secList').innerHTML = list.map(s => `<option value="${s}">`).join('');
+}
+fillSections('other');
 
 /* ---------- الشاشة الافتتاحية ---------- */
 function renderIntro(){
@@ -1056,7 +1347,7 @@ function renderIntro(){
   $('#main').innerHTML = `
   <section class="panel intro">
     <h3>كيف يُقيَّم المخرج؟</h3>
-    <p class="lead">ارفع ملف المخرج الأسبوعي بصيغة PDF، وتقرأ الأداة نصوصه وتخطيطه وخطوطه وألوانه، ثم تطابقها آلياً مع ضوابط الدليلين المعتمدين، وتُصدر الحكم وجدول النواقص، مع تصدير التقرير بصيغة PDF أو Word قابل للتحرير، دون أي تدخل يدوي.</p>
+    <p class="lead">ارفع ملف المخرج الأسبوعي بصيغة PDF أو Word أو Excel، وتقرأ الأداة نصوصه وتخطيطه وخطوطه وألوانه وإعداد صفحاته، ثم تطابقها آلياً مع ضوابط دليل الإدارة المعنية (التعليم · الاستدامة · الدعم المؤسسي) ودليل النماذج والمرفقات، وتُصدر الحكم وجدول النواقص، مع تصدير التقرير بصيغة PDF أو Word قابل للتحرير، دون أي تدخل يدوي.</p>
     <div class="axis-cards">
       ${AXES.map(a => `<div class="axis-card"><h4>${a.name}</h4><ul>${axisItems[a.id].map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('')}
     </div>
@@ -1078,31 +1369,35 @@ function progress(p){ $('#prog').style.width = Math.round(p * 100) + '%'; }
 /* ---------- معالجة الملف ---------- */
 async function handleFile(file){
   if (!file) return;
-  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf'){ toast('الملف المرفوع ليس PDF؛ ارفع المخرج بصيغة PDF.'); return; }
-  if (!window.pdfjsLib){ toast('تعذر تحميل مكتبة قراءة PDF؛ تحقق من الاتصال بالإنترنت ثم أعد المحاولة.'); return; }
+  const kind = fileKind(file);
+  if (kind === 'legacy'){ toast('صيغ doc/xls القديمة غير مدعومة؛ احفظ الملف بصيغة docx أو xlsx أو PDF.'); return; }
+  if (!kind){ toast('الصيغة غير مدعومة؛ ارفع المخرج بصيغة PDF أو Word (docx) أو Excel (xlsx).'); return; }
+  if (kind === 'pdf' && !window.pdfjsLib){ toast('تعذر تحميل مكتبة قراءة PDF؛ تحقق من الاتصال بالإنترنت ثم أعد المحاولة.'); return; }
   state = { ctx: null, result: null, meta: null, file, filter: 'all' };
   $('#fileBox').hidden = false; $('#metaPanel').hidden = true;
   $('#fName').textContent = file.name;
   $('#fMeta').textContent = (file.size / 1024 / 1024).toFixed(2) + ' م.ب';
+  $('#thumb').hidden = kind !== 'pdf';
+  const badge = $('#fmtBadge'); badge.hidden = kind === 'pdf'; badge.textContent = kind === 'docx' ? 'Word' : kind === 'xlsx' ? 'Excel' : '';
   document.querySelectorAll('#steps li').forEach(li => { li.className = ''; const em = li.querySelector('em'); if (em) em.textContent = ''; });
   $('#main').innerHTML = `<section class="panel"><h2>جارٍ تقييم «${esc(file.name)}»</h2><p style="color:var(--muted);margin:0">تُنفَّذ الخطوات آلياً بالكامل داخل المتصفح، ولا يُرسل الملف إلى أي خادم.</p></section>`;
   try {
     step('read', 'run'); progress(0.03);
-    let an;
-    an = await analyzePdf(file, (s, i, n) => { if (i === 1){ step('read', 'done'); step('text', 'run'); } $('#steps li[data-s="text"] em').textContent = `${i}/${n}`; progress(0.05 + 0.55 * i / n); });
+    const an = await analyzeFile(file, (s, i, n) => { if (i === 1){ step('read', 'done'); step('text', 'run'); } const em = $('#steps li[data-s="text"] em'); if (em) em.textContent = `${i}/${n}`; progress(0.05 + 0.55 * i / n); });
     step('read', 'done'); step('text', 'done');
-    $('#fMeta').textContent = `${fmtNum(an.numPages)} صفحة · ${(file.size / 1024 / 1024).toFixed(2)} م.ب`;
+    const unit = an.kind === 'xlsx' ? 'ورقة' : 'صفحة';
+    $('#fMeta').textContent = `${an.kindName} · ${an.numPages ? fmtNum(an.numPages) + ' ' + unit + ' · ' : ''}${(file.size / 1024 / 1024).toFixed(2)} م.ب`;
     if (an.thumbCanvas){ const t = $('#thumb'); t.width = an.thumbCanvas.width; t.height = an.thumbCanvas.height; t.getContext('2d').drawImage(an.thumbCanvas, 0, 0); }
-    let quality = textQuality(an.pages);
+    let quality = qualityOf(an);
     let ocrUsed = false, ocrNote = '';
-    const needOcr = quality.charsPerPage < 40 || (quality.tokens > 60 && quality.commonRatio < 0.02);
+    const needOcr = an.kind === 'pdf' && (quality.charsPerPage < 40 || (quality.tokens > 60 && quality.commonRatio < 0.02));
     if (needOcr){
       step('ocr', 'run', 'تحميل…');
       try {
         const cnt = await runOcr(an, (d, t) => { $('#steps li[data-s="ocr"] em').textContent = `${d}/${t}`; progress(0.6 + 0.2 * d / t); });
         ocrUsed = true; step('ocr', 'done', `${cnt} صفحات`);
       } catch(e){ ocrNote = 'تعذّر تشغيل التعرف الضوئي في هذه البيئة؛ اعتمد التقييم على طبقة النص مع مطابقة تقريبية مقاومة لأخطاء الخطوط.'; step('ocr', 'skip', 'غير متاح'); }
-    } else step('ocr', 'skip', 'غير مطلوب');
+    } else step('ocr', 'skip', an.kind === 'pdf' ? 'غير مطلوب' : 'لا ينطبق');
     step('visual', 'run'); progress(0.82);
     await new Promise(r => setTimeout(r, 30));
     const ctx = buildContext(an, file);
@@ -1111,27 +1406,36 @@ async function handleFile(file){
     await new Promise(r => setTimeout(r, 30));
     const dt = detectType(ctx);
     const ds = detectDeptSection(ctx);
-    const meta = { typeId: dt.type ? dt.type.id : '', autoType: dt.type ? dt.type.id : '', dept: ds.dept, sec: ds.sec, week: detectWeek(ctx), version: detectVersion(ctx) };
+    const meta = { typeId: dt.type ? dt.type.id : '', autoType: dt.type ? dt.type.id : '', deptId: ds.deptId, autoDept: ds.deptId, dept: ds.dept, sec: ds.sec, week: detectWeek(ctx), version: detectVersion(ctx) };
     state.ctx = ctx; state.meta = meta;
-    fillMeta(meta, dt);
+    fillMeta(meta, dt, ds);
     runEval();
     step('rules', 'done'); step('result', 'done'); progress(1);
   } catch(err){
     console.error(err);
     ['read','text','ocr','visual','rules','result'].forEach(s => { const li = document.querySelector(`#steps li[data-s="${s}"]`); if (li.className === 'run') li.className = ''; });
-    const msg = /password/i.test(err && err.name + err.message) ? 'الملف محمي بكلمة مرور؛ ارفع نسخة غير محمية.' : 'تعذّرت قراءة الملف؛ تأكد أنه PDF سليم وغير تالف ثم أعد رفعه.';
+    const m = String((err && err.message) || '');
+    const msg = /password/i.test(err && err.name + err.message) ? 'الملف محمي بكلمة مرور؛ ارفع نسخة غير محمية.'
+      : /jszip/.test(m) ? 'تعذّر تحميل مكتبة قراءة ملفات Word/Excel؛ تحقق من الاتصال بالإنترنت ثم أعد المحاولة.'
+      : /bad-docx|bad-xlsx/.test(m) ? 'الملف غير سليم أو محمي؛ افتحه واحفظه من جديد بصيغة docx أو xlsx ثم أعد رفعه.'
+      : 'تعذّرت قراءة الملف؛ تأكد أنه ملف سليم وغير تالف ثم أعد رفعه.';
     $('#main').innerHTML = `<section class="panel"><h2 style="color:var(--bad)">لم يكتمل التقييم</h2><p style="margin:0">${msg}</p></section>`;
   }
 }
 
-function fillMeta(meta, dt){
+function fillMeta(meta, dt, ds){
   $('#metaPanel').hidden = false;
   $('#mType').value = meta.typeId;
   $('#mTypeAuto').textContent = dt && dt.type ? '· مكتشف آلياً' : '· لم يُكتشف';
-  $('#mDept').value = meta.dept; $('#mSec').value = meta.sec; $('#mWeek').value = meta.week; $('#mVer').value = meta.version;
+  $('#mDept').value = meta.deptId || 'other';
+  $('#mDeptAuto').textContent = ds && ds.deptId && ds.deptId !== 'other' ? '· مكتشفة آلياً' : '· لم تُكتشف';
+  fillSections(meta.deptId);
+  $('#mSec').value = meta.sec; $('#mWeek').value = meta.week; $('#mVer').value = meta.version;
 }
 function readMeta(){
-  Object.assign(state.meta, { typeId: $('#mType').value, dept: $('#mDept').value.trim(), sec: $('#mSec').value.trim(), week: $('#mWeek').value.trim(), version: $('#mVer').value.trim() });
+  const deptId = $('#mDept').value;
+  Object.assign(state.meta, { typeId: $('#mType').value, deptId, dept: (DEPT_BY_ID[deptId] && DEPT_BY_ID[deptId].id !== 'other' ? DEPT_BY_ID[deptId].name : state.meta.dept) || '', sec: $('#mSec').value.trim(), week: $('#mWeek').value.trim(), version: $('#mVer').value.trim() });
+  if (deptId !== 'other') state.meta.dept = DEPT_BY_ID[deptId].name;
 }
 function runEval(){
   const res = evaluate(state.ctx, state.meta);
@@ -1167,7 +1471,7 @@ function renderResult(){
   <section class="verdict ${R.passed ? 'pass' : 'fail'}">
     ${ringSvg(R.score, R.passed)}
     <div>
-      <div class="v-label">${esc(typeName)} · ${esc(M.dept || 'الإدارة غير محددة')}${M.sec ? ' · قسم ' + esc(M.sec) : ''}${M.week ? ' · الأسبوع ' + esc(M.week) : ''}</div>
+      <div class="v-label">${esc(R.fmtName)} · ${esc(typeName)} · ${esc(M.dept || 'الإدارة غير محددة')}${M.sec ? ' · ' + esc(M.sec) : ''}${M.week ? ' · الأسبوع ' + esc(M.week) : ''}</div>
       <div class="v-title">${R.passed ? 'يحقق الضوابط والشروط' : 'لا يحقق الضوابط والشروط'}</div>
       <div class="v-sub">${esc(sub)}</div>
       <div class="v-counts">
@@ -1326,10 +1630,12 @@ async function buildReport(){
   let pageNo = 1;
   let body = reportPageShell(root, info, pageNo);
   const typeName = R.type ? R.type.name : 'غير محدد';
+  const unit = R.kind === 'xlsx' ? 'ورقة' : 'صفحة';
   const metaCells = [
-    ['اسم الملف', state.file.name], ['نوع الوثيقة', typeName], ['الإدارة', M.dept || 'غير محددة'],
-    ['القسم', M.sec || 'غير محدد'], ['الأسبوع', M.week || 'غير محدد'], ['رقم الإصدار', M.version || 'غير مرصود'],
-    ['عدد الصفحات', String(ctx.an.numPages)], ['جهة الاعتماد المطلوبة', R.matrixLabel || '—'], ['تاريخ التقييم', info.date]
+    ['اسم الملف', state.file.name], ['صيغة الملف', R.fmtName + (ctx.an.numPages ? ` · ${ctx.an.numPages} ${unit}` : '')], ['نوع الوثيقة', typeName],
+    ['الإدارة', M.dept || 'غير محددة'], ['القسم / الوحدة', M.sec || 'غير محدد'], ['الأسبوع', M.week || 'غير محدد'],
+    ['رقم الإصدار', M.version || 'غير مرصود'], ['جهة الاعتماد المطلوبة', R.matrixLabel || '—'], ['تاريخ التقييم', info.date],
+    ['الدليل المرجعي للإدارة', R.deptGuide || '—'], ['عدد الضوابط المفحوصة', String(R.checks.length)], ['الدرجة العامة', R.score + '%']
   ];
   const critTxt = R.critFails.length ? `نواقص جوهرية تمنع الاعتماد: ${R.critFails.map(c => c.title).join('، ')}.` : (R.passed ? `المخرج مستوفٍ للضوابط بدرجة «${R.band}».` : 'النتيجة دون الحد الأدنى للاعتماد (80%).');
   body.innerHTML = `
@@ -1418,7 +1724,7 @@ async function saveFile(fname, blob, label){
   setTimeout(() => URL.revokeObjectURL(url), 4000);
   toast(`نُزِّل ${label}.`);
 }
-const reportBaseName = () => 'تقرير_تقييم_' + state.file.name.replace(/\.pdf$/i, '').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
+const reportBaseName = () => 'تقرير_تقييم_' + state.file.name.replace(/\.(pdf|docx|xlsx)$/i, '').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
 
 async function exportReport(kind){
   const btn = kind === 'docx' ? $('#exportDocx') : $('#exportPdf'); if (!btn) return;
@@ -1508,10 +1814,12 @@ async function buildDocx(){
 
   // بيانات المخرج
   children.push(heading('بيانات المخرج', 1));
+  const unitW = R.kind === 'xlsx' ? 'ورقة' : 'صفحة';
   const metaPairs = [
-    ['اسم الملف', state.file.name], ['نوع الوثيقة', typeName], ['الإدارة', M.dept || 'غير محددة'], ['القسم', M.sec || 'غير محدد'],
-    ['الأسبوع', M.week || 'غير محدد'], ['رقم الإصدار', M.version || 'غير مرصود'], ['عدد الصفحات', String(ctx.an.numPages)], ['تاريخ التقييم', info.date],
-    ['جهة الاعتماد المطلوبة', R.matrixLabel || '—']
+    ['اسم الملف', state.file.name], ['صيغة الملف', R.fmtName + (ctx.an.numPages ? ` · ${ctx.an.numPages} ${unitW}` : '')],
+    ['نوع الوثيقة', typeName], ['الإدارة', M.dept || 'غير محددة'], ['القسم / الوحدة', M.sec || 'غير محدد'],
+    ['الأسبوع', M.week || 'غير محدد'], ['رقم الإصدار', M.version || 'غير مرصود'], ['تاريخ التقييم', info.date],
+    ['جهة الاعتماد المطلوبة', R.matrixLabel || '—'], ['الدليل المرجعي للإدارة', R.deptGuide || '—']
   ];
   const mW = [1800, 2877, 1800, 2877];
   const metaRows = [];
@@ -1640,6 +1948,7 @@ input.addEventListener('change', () => { const f = input.files && input.files[0]
 document.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); });
 $('#reEval').addEventListener('click', () => { if (!state.ctx) return; readMeta(); runEval(); toast('أُعيد التقييم بالبيانات المعدلة.'); });
 $('#mType').addEventListener('change', () => { if (!state.ctx) return; readMeta(); runEval(); });
+$('#mDept').addEventListener('change', () => { fillSections($('#mDept').value); if (!state.ctx) return; readMeta(); runEval(); });
 
 renderIntro();
 renderHistory();
